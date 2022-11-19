@@ -8,8 +8,6 @@ from tgbot.db.aiosqlite_db import add_or_return_user, change_sprint_or_timer, up
     update_work_time, update_rest_time, update_sprint_time, update_table_with_timer_started, update_today_stats
 
 
-# TODO make_a comment about fuction
-
 # Form the keyboard depending on whether the sprint is running or not
 def user_start_keyboard(sprint_or_timer):
     if sprint_or_timer == 0:
