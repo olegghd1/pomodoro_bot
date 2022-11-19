@@ -5,7 +5,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeybo
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from tgbot.db.aiosqlite_db import add_or_return_user, change_sprint_or_timer, update_table_with_pomo_started, \
     update_table_with_rest_started, update_table_with_sprint_finished, update_table_with_timer_finished, \
-    update_work_time, update_rest_time, update_sprint_time, update_table_with_timer_started
+    update_work_time, update_rest_time, update_sprint_time, update_table_with_timer_started, update_today_stats
 
 
 # TODO make_a comment about fuction
@@ -180,6 +180,7 @@ def format_timer(end_date):
         text = text.format(time=minutes)
     return text
 
+
 # /stop_sprint
 async def stop_sprint(message: types.Message, scheduler: AsyncIOScheduler):
     user_id = message.from_user.id
@@ -196,8 +197,10 @@ async def stop_sprint(message: types.Message, scheduler: AsyncIOScheduler):
         await message.answer(text=("You are done with this sprint.\n\n"
                                    "OK, no problem."), reply_markup=user_start_keyboard(2))
 
+
 # send any number to bot, works like /start_sprint
 async def start_timer(message: types.Message, scheduler: AsyncIOScheduler):
+    print('hello')
     minutes = int(message.text)
     if minutes > 1440:
         await message.answer("Working more than one day is unhealthy, enter a number less than 1440")
@@ -228,6 +231,7 @@ async def send_about_timer_finished(message: types.Message, work_time):
     await update_table_with_timer_finished(user_id, work_time)
     await message.answer(text="Pomodoro done! How's it going?", reply_markup=user_start_keyboard(2))
 
+
 # /cancel
 async def cancel(message: types.Message, scheduler: AsyncIOScheduler):
     user_id = message.from_user.id
@@ -244,8 +248,11 @@ async def cancel(message: types.Message, scheduler: AsyncIOScheduler):
     await change_sprint_or_timer(user_id, 3)
     await message.answer("Ok, no problem.", reply_markup=user_start_keyboard(2))
 
+
 # /stats
 async def show_stats(message: types.Message):
+    await update_today_stats()
+
     def format_time(time):
         time = int(time)
         if time < 60:
@@ -270,22 +277,22 @@ async def show_stats(message: types.Message):
     today_pomodoro_time = user[12]
     registration_date = user[14]
     registration_date = date.fromisoformat(registration_date)
-    last_date = date.today().day - registration_date.day
+    last_date = date.today() - registration_date
+    last_date = last_date.days
     if all_pomodoro and today_pomodoro and last_date:
         today_pomodoro_time = format_time(today_pomodoro_time)
         all_pomodoro_time = format_time(all_pomodoro_time)
-        text = ("You did {today_pomodoro} pomodoro{'s'[:today_pomodoro ^ 1]} ({today_pomodoro_time}) today. Good "
-                "job!\n\n "
-                "You also have completed {all_pomodoro} pomodoro{'s'[:all_pomodoro ^ 1]} ({all_pomodoro_time}) "
-                "in last {last_date} day{:last_date ^ 1}, by the way.").format(
-            today_pomodoro_time=today_pomodoro_time, all_pomodoro_time=all_pomodoro_time, last_date=last_date
-        )
+        text = (f"You did {today_pomodoro} pomodoro{'s'[:today_pomodoro ^ 1]} ({today_pomodoro_time}) today. Good "
+                f"job!\n\n "
+                f"You also have completed {all_pomodoro} pomodoro{'s'[:all_pomodoro ^ 1]} ({all_pomodoro_time}) "
+                f"in last {last_date} day{'s'[:last_date ^ 1]}, by the way.")
     elif today_pomodoro:
         today_pomodoro_time = format_time(today_pomodoro_time)
         text = f"You did {today_pomodoro} pomodoro{'s'[:today_pomodoro ^ 1]} ({today_pomodoro_time}) today. Good job!"
     else:
         text = "You have no completed pomodoros today. But don't upset!\nThere is still time to start one."
     await message.answer(text=text, reply_markup=user_start_keyboard(sprint_or_timer))
+
 
 # /rules
 async def show_rules(message: types.Message):
@@ -300,6 +307,7 @@ async def show_rules(message: types.Message):
                                "5. After four pomodoros, take a longer break (15-30 minutes).\n\n"
                                "Sprint consists of four 25-minutes pomodoros."),
                          reply_markup=user_start_keyboard(sprint_or_timer))
+
 
 # /settings
 async def change_settings(message: types.Message):
@@ -431,7 +439,7 @@ def register_user_handlers(dp: Dispatcher):
     dp.register_message_handler(start_sprint, commands=['start_sprint'])
     dp.register_callback_query_handler(show_left_time, text='time')
     dp.register_message_handler(stop_sprint, commands=["stop_sprint"])
-    dp.register_message_handler(start_timer, filters.RegexpCommandsFilter(regexp_commands=[r'^\d*$']))
+    dp.register_message_handler(start_timer, regexp='^\d*$')
     dp.register_message_handler(cancel, commands=['cancel'])
     dp.register_message_handler(show_rules, commands=['rules'])
     dp.register_message_handler(change_settings, commands=['settings'])

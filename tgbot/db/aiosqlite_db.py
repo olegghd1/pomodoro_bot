@@ -85,25 +85,25 @@ async def update_table_with_pomo_started(user_id, work_time):
         await db.commit()
 
 
-async def update_today_stats(db):
-    sql = "SELECT today_stats FROM users"
-    cursor = await db.execute(sql)
-    tuple_ = await cursor.fetchone()
-    stats_date = date.fromisoformat(tuple_[0])
-    today = date.today()
-    if stats_date < today:
-        sql = "UPDATE users SET today_stats=?, today_pomodoro, today_pomodoro_time"
-        now = today.isoformat()
-        params = (now, 0, 0)
-        await db.execute(sql, params)
-        await db.commit()
-    return
+async def update_today_stats():
+    async with aiosqlite.connect(path_to_db) as db:
+        sql = "SELECT today_stats FROM users"
+        cursor = await db.execute(sql)
+        tuple_ = await cursor.fetchone()
+        stats_date = date.fromisoformat(tuple_[0])
+        today = date.today()
+        if stats_date < today:
+            sql = "UPDATE users SET today_stats=?, today_pomodoro=?, today_pomodoro_time=?"
+            now = today.isoformat()
+            params = (now, 0, 0)
+            await db.execute(sql, params)
+            await db.commit()
+        return
 
 
 async def update_table_with_rest_started(user_id, rest_time):
     end_date = (datetime.now() + timedelta(minutes=rest_time)).isoformat()
     async with aiosqlite.connect(path_to_db) as db:
-        await update_today_stats(db)
         parameters = (user_id,)
         sql = """SELECT work_time, all_pomodoro, all_pomodoro_time, today_pomodoro, 
         today_pomodoro_time FROM users WHERE telegram_id=?"""
@@ -123,7 +123,6 @@ async def update_table_with_rest_started(user_id, rest_time):
 
 async def update_table_with_sprint_finished(user_id):
     async with aiosqlite.connect(path_to_db) as db:
-        await update_today_stats(db)
         parameters = (user_id,)
         sql = """SELECT work_time, all_pomodoro, all_pomodoro_time, today_pomodoro, 
         today_pomodoro_time FROM users WHERE telegram_id=?"""
@@ -143,7 +142,6 @@ async def update_table_with_sprint_finished(user_id):
 
 async def update_table_with_timer_finished(user_id, work_time):
     async with aiosqlite.connect(path_to_db) as db:
-        await update_today_stats(db)
         parameters = (user_id,)
         sql = """SELECT all_pomodoro, all_pomodoro_time, today_pomodoro, 
         today_pomodoro_time FROM users WHERE telegram_id=?"""
